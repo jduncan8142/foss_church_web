@@ -1,0 +1,51 @@
+# FOSS Church marketing site — fc1 deployment
+#
+#   Local test:  http://localhost:8090  (on fc1 itself — bound to loopback only)
+#   Via NPM:     add a Proxy Host for fosschurch.com / www.fosschurch.com that
+#                forwards to host "fosschurch-web" port 8080 (both this container
+#                and npm_app_1 share the external fc_external network). NPM reaches
+#                the container over that network, NOT via the host port below.
+#
+# Secrets: the SMTP password is read from a gitignored fosschurch-web.env next
+# to this file (see fosschurch-web.env.example). env_file uses `format: raw` so
+# a password containing $ is passed through verbatim, not interpolated. Without
+# it the site still runs but logs submissions instead of emailing them.
+#
+# Leads persist to ./data/leads.jsonl on the host (bind-mounted; never served).
+
+services:
+  fosschurch-web:
+    build: .
+    image: fosschurch-web:latest
+    container_name: fosschurch-web
+    restart: unless-stopped
+    user: "1000:1000" # write data/leads.jsonl as fcadmin
+    env_file:
+      - path: fosschurch-web.env
+        format: raw
+        required: false
+    environment:
+      NODE_ENV: "production"
+      PORT: "8080"
+      FC_BASE_URL: "https://fosschurch.com"
+      FC_ADMIN_EMAILS: "jason.matthew.duncan@gmail.com"
+      FC_AUTOREPLY: "true"
+      FC_SMTP_HOST: "mail.fosschurch.com"
+      FC_SMTP_PORT: "465"
+      FC_SMTP_SECURE: "true"
+      FC_SMTP_USER: "contact@fosschurch.com"
+      FC_SMTP_FROM: "FOSS Church <contact@fosschurch.com>"
+      FC_DATA_DIR: "/app/data"
+    volumes:
+      - ./data:/app/data
+    ports:
+      # Loopback-only: reachable as localhost:8090 on fc1 for testing, not from
+      # the LAN. Public traffic comes through NPM over fc_external.
+      - "127.0.0.1:8090:8080"
+    networks:
+      - default
+      - fc_external
+
+networks:
+  fc_external:
+    external: true

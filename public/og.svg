@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="FOSS Church — Technology in service of the Gospel">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0d1320"/>
+      <stop offset="1" stop-color="#080b12"/>
+    </linearGradient>
+    <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <radialGradient id="glow1" cx="0.5" cy="0.5" r="0.5">
+      <stop stop-color="#2dd4bf" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#2dd4bf" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow2" cx="0.5" cy="0.5" r="0.5">
+      <stop stop-color="#38bdf8" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="180" cy="120" r="360" fill="url(#glow1)"/>
+  <circle cx="1080" cy="120" r="320" fill="url(#glow2)"/>
+
+  <!-- logo mark -->
+  <g transform="translate(96 108) scale(2.1)">
+    <g stroke="url(#grad)" stroke-width="5.5" stroke-linecap="round">
+      <line x1="24" y1="8" x2="24" y2="40"/>
+      <line x1="11" y1="20" x2="37" y2="20"/>
+    </g>
+    <g fill="#f5b942">
+      <circle cx="24" cy="8" r="3.6"/>
+      <circle cx="24" cy="40" r="3.6"/>
+      <circle cx="11" cy="20" r="3.6"/>
+      <circle cx="37" cy="20" r="3.6"/>
+    </g>
+    <circle cx="24" cy="20" r="3" fill="#0b0f17"/>
+  </g>
+  <text x="210" y="158" font-family="Segoe UI, system-ui, sans-serif" font-size="46" font-weight="800" fill="#ffffff" letter-spacing="-1">FOSS<tspan fill="#2dd4bf">Church</tspan></text>
+
+  <text x="96" y="330" font-family="Segoe UI, system-ui, sans-serif" font-size="74" font-weight="800" fill="#f3f7fc" letter-spacing="-2">Technology in service</text>
+  <text x="96" y="416" font-family="Segoe UI, system-ui, sans-serif" font-size="74" font-weight="800" letter-spacing="-2">
+    <tspan fill="#f3f7fc">of </tspan><tspan fill="url(#grad)">the Gospel.</tspan>
+  </text>
+
+  <text x="96" y="500" font-family="Segoe UI, system-ui, sans-serif" font-size="32" font-weight="400" fill="#9aa7b8">Free &amp; at-cost technology for churches and non-profits.</text>
+
+  <rect x="96" y="548" width="1008" height="1" fill="#1d2636"/>
+  <text x="96" y="592" font-family="Segoe UI, system-ui, sans-serif" font-size="26" font-weight="600" fill="#6c7a8d">fosschurch.com</text>
+  <text x="1104" y="592" text-anchor="end" font-family="Segoe UI, system-ui, sans-serif" font-size="26" font-weight="500" fill="#f5b942">A non-profit ministry</text>
+</svg>

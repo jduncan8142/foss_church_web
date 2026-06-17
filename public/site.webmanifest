@@ -1,0 +1,12 @@
+{
+  "name": "FOSS Church",
+  "short_name": "FOSS Church",
+  "description": "Free and at-cost technology services and software for churches and non-profits.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#0b0f17",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

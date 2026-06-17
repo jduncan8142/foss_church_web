@@ -1,0 +1,17 @@
+# dependencies
+/node_modules/
+
+# runtime data (lead log)
+/data/
+
+# secrets — only the example is committed
+fosschurch-web.env
+*.local
+
+# logs / os cruft
+*.log
+.DS_Store
+Thumbs.db
+
+# local tooling / editor config
+.claude/
