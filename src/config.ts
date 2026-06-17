@@ -55,6 +55,13 @@ export const config = {
     max: num(env.FC_RATELIMIT_MAX, 5),
     windowMs: num(env.FC_RATELIMIT_WINDOW_MS, 10 * 60 * 1000),
   },
+
+  // CIDRs whose requests may set X-Forwarded-For (i.e. our reverse proxy).
+  // Defaults cover loopback + RFC1918; the fc_external Docker subnet falls
+  // OUTSIDE RFC1918, so it's supplied via docker-compose.yml.
+  trustedProxyCidrs: list(env.FC_TRUSTED_PROXY_CIDRS).length
+    ? list(env.FC_TRUSTED_PROXY_CIDRS)
+    : ["127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
 } as const;
 
 // When no SMTP password is configured we still accept + store submissions but

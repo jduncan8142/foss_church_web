@@ -42,17 +42,40 @@ app.get("/healthz", (c) =>
   c.json({ status: "ok", smtp: smtpConfigured, time: new Date().toISOString() }),
 );
 
-// RFC1918 / loopback / link-local / ULA — i.e. an address that can only be our
-// own reverse proxy (the NPM container) rather than a real internet client.
-function isPrivateAddr(addr: string): boolean {
+// IPv4 dotted-quad -> 32-bit int (null if not IPv4).
+function ipv4ToInt(ip: string): number | null {
+  const m = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return null;
+  let n = 0;
+  for (let i = 1; i <= 4; i++) {
+    const o = Number(m[i]);
+    if (o > 255) return null;
+    n = n * 256 + o;
+  }
+  return n >>> 0;
+}
+
+// Is `addr` inside `cidr`? IPv4 CIDRs match numerically; for IPv6 we only
+// support an exact-address match (enough for ::1).
+function inCidr(addr: string, cidr: string): boolean {
+  if (cidr.includes(":")) return addr === cidr.split("/")[0];
+  const [base, bitsRaw] = cidr.split("/");
+  const bits = bitsRaw === undefined ? 32 : Number(bitsRaw);
+  const a = ipv4ToInt(addr);
+  const b = ipv4ToInt(base!);
+  if (a === null || b === null || !Number.isInteger(bits) || bits < 0 || bits > 32) return false;
+  if (bits === 0) return true;
+  const mask = (0xffffffff << (32 - bits)) >>> 0;
+  return (a & mask) === (b & mask);
+}
+
+// True when the direct socket peer is one of our trusted reverse proxies, so
+// its X-Forwarded-For can be believed. Anything else is a potentially hostile
+// client whose headers we ignore.
+function isTrustedProxy(addr: string): boolean {
   const a = addr.replace(/^::ffff:/i, ""); // unwrap IPv4-mapped IPv6
-  if (a === "127.0.0.1" || a === "::1") return true;
-  if (/^10\./.test(a)) return true;
-  if (/^192\.168\./.test(a)) return true;
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(a)) return true;
-  if (/^169\.254\./.test(a)) return true; // link-local
-  if (/^(fc|fd)[0-9a-f]{2}:/i.test(a)) return true; // IPv6 ULA
-  return false;
+  if (a === "::1") return true;
+  return config.trustedProxyCidrs.some((c) => inCidr(a, c));
 }
 
 // Rate-limit key. The socket peer (from Bun's requestIP) cannot be spoofed by
@@ -68,7 +91,7 @@ function clientIp(c: Context): string {
   const server = c.env as { requestIP?: (req: Request) => { address?: string } | null } | undefined;
   const peer = server?.requestIP?.(c.req.raw)?.address;
 
-  if (peer && isPrivateAddr(peer)) {
+  if (peer && isTrustedProxy(peer)) {
     const xff = c.req.header("x-forwarded-for");
     const hops = xff?.split(",").map((s) => s.trim()).filter(Boolean);
     if (hops && hops.length) return hops[hops.length - 1]!;
