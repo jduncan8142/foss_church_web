@@ -1,0 +1,23 @@
+{
+  "name": "fosschurch-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FOSS Church marketing site — Bun + Hono server with a contact endpoint.",
+  "scripts": {
+    "dev": "bun run --watch src/server.ts",
+    "start": "bun run src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "build:og": "bun run scripts/build-og.mjs"
+  },
+  "dependencies": {
+    "hono": "^4.6.15",
+    "nodemailer": "^6.9.16"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/bun": "^1.1.14",
+    "@types/nodemailer": "^6.4.17",
+    "typescript": "^5.7.2"
+  }
+}

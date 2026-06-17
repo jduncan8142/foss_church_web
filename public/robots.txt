@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fosschurch.com/sitemap.xml
