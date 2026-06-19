@@ -8,10 +8,11 @@ import type { Context } from "hono";
 import { serveStatic } from "hono/bun";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
-import { config, smtpConfigured } from "./config.ts";
+import { config, smtpConfigured, turnstileEnabled } from "./config.ts";
 import { validateAndNormalize } from "./validate.ts";
 import { storeLead } from "./leads.ts";
 import { sendContactEmails, verifyEmail } from "./email.ts";
+import { verifyTurnstile } from "./turnstile.ts";
 import { rateLimit } from "./rateLimit.ts";
 
 const app = new Hono();
@@ -24,11 +25,12 @@ app.use(
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
       baseUri: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "https://challenges.cloudflare.com"],
+      frameSrc: ["https://challenges.cloudflare.com"],
       formAction: ["'self'"],
       frameAncestors: ["'none'"],
       objectSrc: ["'none'"],
@@ -39,7 +41,13 @@ app.use(
 );
 
 app.get("/healthz", (c) =>
-  c.json({ status: "ok", smtp: smtpConfigured, time: new Date().toISOString() }),
+  c.json({ status: "ok", smtp: smtpConfigured, captcha: turnstileEnabled, time: new Date().toISOString() }),
+);
+
+// Public, non-secret config for the front-end. Exposes the Turnstile site key
+// only when the captcha is fully configured; the secret is never sent.
+app.get("/api/config", (c) =>
+  c.json({ turnstileSiteKey: turnstileEnabled ? config.turnstile.siteKey : null }),
 );
 
 // IPv4 dotted-quad -> 32-bit int (null if not IPv4).
@@ -119,6 +127,14 @@ app.post("/api/contact", async (c) => {
   // Honeypot: bots fill the hidden "website" field. Pretend success.
   if (typeof body.website === "string" && body.website.trim() !== "") {
     return c.json({ ok: true });
+  }
+
+  // Captcha (when configured): verify the Turnstile token before any real work.
+  if (turnstileEnabled) {
+    const token = typeof body.turnstileToken === "string" ? body.turnstileToken : "";
+    if (!(await verifyTurnstile(token, ip))) {
+      return c.json({ ok: false, error: "Captcha verification failed. Please try again." }, 403);
+    }
   }
 
   const result = validateAndNormalize(body, {

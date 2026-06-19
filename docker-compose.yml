@@ -36,6 +36,11 @@ services:
       FC_SMTP_USER: "contact@fosschurch.com"
       FC_SMTP_FROM: "FOSS Church <contact@fosschurch.com>"
       FC_DATA_DIR: "/app/data"
+      # Cloudflare Turnstile captcha. The site key is public — paste it here once
+      # you create a widget at dash.cloudflare.com -> Turnstile (domain
+      # fosschurch.com). The secret goes in fosschurch-web.env. The captcha only
+      # activates when BOTH the site key and secret are set.
+      FC_TURNSTILE_SITE_KEY: ""
       # Trust X-Forwarded-For only from our reverse proxy. Includes loopback +
       # RFC1918 plus the Docker nets this stack uses (fc_external 172.10/16 is
       # OUTSIDE RFC1918, so it must be listed explicitly) — without it, every

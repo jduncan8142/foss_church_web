@@ -75,6 +75,8 @@ All config is environment-driven (`src/config.ts`). Non-secret values live in
 | `FC_DATA_DIR` | `./data` (`/app/data` in Docker) | Lead log location |
 | `FC_RATELIMIT_MAX` / `FC_RATELIMIT_WINDOW_MS` | `5` / `600000` | Per-IP throttle on `/api/contact` |
 | `FC_TRUSTED_PROXY_CIDRS` | loopback + RFC1918 | CIDRs allowed to set `X-Forwarded-For`. Must include the proxy's Docker subnet (`fc_external` = `172.10.0.0/16`, outside RFC1918) so the real client IP is used for rate-limiting/logging |
+| `FC_TURNSTILE_SITE_KEY` | — | Cloudflare Turnstile **public** site key (compose `environment`) |
+| `FC_TURNSTILE_SECRET` | — | Turnstile **secret** (gitignored env file). Captcha enforces only when both this and the site key are set |
 
 ## Deploy to fc1
 

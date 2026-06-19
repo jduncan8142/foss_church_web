@@ -62,7 +62,20 @@ export const config = {
   trustedProxyCidrs: list(env.FC_TRUSTED_PROXY_CIDRS).length
     ? list(env.FC_TRUSTED_PROXY_CIDRS)
     : ["127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
+
+  // Cloudflare Turnstile. siteKey is public (sent to the browser); secret stays
+  // server-side. Both must be set for the captcha to activate (see
+  // turnstileEnabled) — otherwise the form falls back to honeypot + rate limit.
+  turnstile: {
+    siteKey: env.FC_TURNSTILE_SITE_KEY ?? "",
+    secret: env.FC_TURNSTILE_SECRET ?? "",
+  },
 } as const;
+
+// Captcha is enforced only when BOTH keys are present, so we never require a
+// token the browser can't produce (or render a widget the server won't check).
+export const turnstileEnabled =
+  config.turnstile.siteKey.length > 0 && config.turnstile.secret.length > 0;
 
 // When no SMTP password is configured we still accept + store submissions but
 // log them instead of sending (handy for local development).

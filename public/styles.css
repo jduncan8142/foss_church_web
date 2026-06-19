@@ -883,6 +883,15 @@ strong {
   box-shadow: none;
 }
 
+/* Turnstile widget container — collapses to nothing until the widget renders. */
+.turnstile-field:empty {
+  display: none;
+}
+.turnstile-field {
+  margin-top: 2px;
+  min-height: 65px;
+}
+
 .btn-submit {
   margin-top: 6px;
   position: relative;
