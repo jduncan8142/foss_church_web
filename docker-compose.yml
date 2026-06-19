@@ -40,7 +40,7 @@ services:
       # you create a widget at dash.cloudflare.com -> Turnstile (domain
       # fosschurch.com). The secret goes in fosschurch-web.env. The captcha only
       # activates when BOTH the site key and secret are set.
-      FC_TURNSTILE_SITE_KEY: ""
+      FC_TURNSTILE_SITE_KEY: "0x4AAAAAADn3nf72MrgrGb5H"
       # Umami analytics snippet. Set both once you've created a website in Umami
       # (the script URL's origin is auto-allowed in the CSP). Both public.
       FC_UMAMI_SRC: "" # e.g. https://analytics.fosschurch.com/script.js
