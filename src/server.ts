@@ -8,7 +8,7 @@ import type { Context } from "hono";
 import { serveStatic } from "hono/bun";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
-import { config, smtpConfigured, turnstileEnabled } from "./config.ts";
+import { config, smtpConfigured, turnstileEnabled, umamiEnabled } from "./config.ts";
 import { validateAndNormalize } from "./validate.ts";
 import { storeLead } from "./leads.ts";
 import { sendContactEmails, verifyEmail } from "./email.ts";
@@ -16,6 +16,15 @@ import { verifyTurnstile } from "./turnstile.ts";
 import { rateLimit } from "./rateLimit.ts";
 
 const app = new Hono();
+
+// Allow the configured Umami analytics origin (if any) in the CSP.
+let umamiOrigin: string | null = null;
+try {
+  if (config.umami.src) umamiOrigin = new URL(config.umami.src).origin;
+} catch {
+  console.error("[config] FC_UMAMI_SRC is not a valid URL:", config.umami.src);
+}
+const umamiCsp = umamiOrigin ? [umamiOrigin] : [];
 
 app.use("*", logger());
 
@@ -25,11 +34,11 @@ app.use(
     contentSecurityPolicy: {
       defaultSrc: ["'self'"],
       baseUri: ["'self'"],
-      scriptSrc: ["'self'", "https://challenges.cloudflare.com"],
+      scriptSrc: ["'self'", "https://challenges.cloudflare.com", ...umamiCsp],
       styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", "https://challenges.cloudflare.com"],
+      connectSrc: ["'self'", "https://challenges.cloudflare.com", ...umamiCsp],
       frameSrc: ["https://challenges.cloudflare.com"],
       formAction: ["'self'"],
       frameAncestors: ["'none'"],
@@ -45,9 +54,12 @@ app.get("/healthz", (c) =>
 );
 
 // Public, non-secret config for the front-end. Exposes the Turnstile site key
-// only when the captcha is fully configured; the secret is never sent.
+// (only when the captcha is fully configured) and the Umami snippet details.
 app.get("/api/config", (c) =>
-  c.json({ turnstileSiteKey: turnstileEnabled ? config.turnstile.siteKey : null }),
+  c.json({
+    turnstileSiteKey: turnstileEnabled ? config.turnstile.siteKey : null,
+    umami: umamiEnabled ? { src: config.umami.src, websiteId: config.umami.websiteId } : null,
+  }),
 );
 
 // IPv4 dotted-quad -> 32-bit int (null if not IPv4).

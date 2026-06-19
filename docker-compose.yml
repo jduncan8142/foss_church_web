@@ -41,6 +41,10 @@ services:
       # fosschurch.com). The secret goes in fosschurch-web.env. The captcha only
       # activates when BOTH the site key and secret are set.
       FC_TURNSTILE_SITE_KEY: ""
+      # Umami analytics snippet. Set both once you've created a website in Umami
+      # (the script URL's origin is auto-allowed in the CSP). Both public.
+      FC_UMAMI_SRC: "" # e.g. https://analytics.fosschurch.com/script.js
+      FC_UMAMI_WEBSITE_ID: ""
       # Trust X-Forwarded-For only from our reverse proxy. Includes loopback +
       # RFC1918 plus the Docker nets this stack uses (fc_external 172.10/16 is
       # OUTSIDE RFC1918, so it must be listed explicitly) — without it, every
