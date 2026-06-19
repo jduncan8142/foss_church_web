@@ -43,8 +43,8 @@ services:
       FC_TURNSTILE_SITE_KEY: "0x4AAAAAADn3nf72MrgrGb5H"
       # Umami analytics snippet. Set both once you've created a website in Umami
       # (the script URL's origin is auto-allowed in the CSP). Both public.
-      FC_UMAMI_SRC: "" # e.g. https://analytics.fosschurch.com/script.js
-      FC_UMAMI_WEBSITE_ID: ""
+      FC_UMAMI_SRC: "https://analytics.fosschurch.com/script.js"
+      FC_UMAMI_WEBSITE_ID: "085592d1-a452-4ed2-9e1f-abe8fc2f811a"
       # Trust X-Forwarded-For only from our reverse proxy. Includes loopback +
       # RFC1918 plus the Docker nets this stack uses (fc_external 172.10/16 is
       # OUTSIDE RFC1918, so it must be listed explicitly) — without it, every
