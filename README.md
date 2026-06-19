@@ -77,6 +77,8 @@ All config is environment-driven (`src/config.ts`). Non-secret values live in
 | `FC_TRUSTED_PROXY_CIDRS` | loopback + RFC1918 | CIDRs allowed to set `X-Forwarded-For`. Must include the proxy's Docker subnet (`fc_external` = `172.10.0.0/16`, outside RFC1918) so the real client IP is used for rate-limiting/logging |
 | `FC_TURNSTILE_SITE_KEY` | — | Cloudflare Turnstile **public** site key (compose `environment`) |
 | `FC_TURNSTILE_SECRET` | — | Turnstile **secret** (gitignored env file). Captcha enforces only when both this and the site key are set |
+| `FC_UMAMI_SRC` | — | Umami tracking script URL, e.g. `https://analytics.fosschurch.com/script.js`. Its origin is auto-added to the CSP |
+| `FC_UMAMI_WEBSITE_ID` | — | Umami website id. Snippet loads only when both this and `FC_UMAMI_SRC` are set |
 
 ## Deploy to fc1
 

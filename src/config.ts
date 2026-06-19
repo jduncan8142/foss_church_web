@@ -70,12 +70,23 @@ export const config = {
     siteKey: env.FC_TURNSTILE_SITE_KEY ?? "",
     secret: env.FC_TURNSTILE_SECRET ?? "",
   },
+
+  // Umami analytics (self-hosted). Both public; the tracking snippet loads only
+  // when both are set (see umamiEnabled). The script URL's origin is added to
+  // the CSP automatically in server.ts.
+  umami: {
+    src: env.FC_UMAMI_SRC ?? "", // e.g. https://analytics.fosschurch.com/script.js
+    websiteId: env.FC_UMAMI_WEBSITE_ID ?? "",
+  },
 } as const;
 
 // Captcha is enforced only when BOTH keys are present, so we never require a
 // token the browser can't produce (or render a widget the server won't check).
 export const turnstileEnabled =
   config.turnstile.siteKey.length > 0 && config.turnstile.secret.length > 0;
+
+// Analytics snippet loads only when both the script URL and website id are set.
+export const umamiEnabled = config.umami.src.length > 0 && config.umami.websiteId.length > 0;
 
 // When no SMTP password is configured we still accept + store submissions but
 // log them instead of sending (handy for local development).

@@ -109,7 +109,19 @@
       return r.json();
     })
     .then(function (cfg) {
-      turnstileSiteKey = cfg && cfg.turnstileSiteKey;
+      cfg = cfg || {};
+
+      // Umami analytics — inject the tracking snippet when configured.
+      if (cfg.umami && cfg.umami.src && cfg.umami.websiteId) {
+        var u = document.createElement("script");
+        u.defer = true;
+        u.src = cfg.umami.src;
+        u.setAttribute("data-website-id", cfg.umami.websiteId);
+        document.head.appendChild(u);
+      }
+
+      // Cloudflare Turnstile captcha.
+      turnstileSiteKey = cfg.turnstileSiteKey;
       if (!turnstileSiteKey) return;
       window.__fcTurnstileOnload = function () {
         try {
