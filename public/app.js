@@ -101,6 +101,45 @@
   var submitBtn = form.querySelector(".btn-submit");
   var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+  /* ---- Cloudflare Turnstile (only loaded when configured server-side) ---- */
+  var turnstileSiteKey = null;
+  var turnstileWidgetId = null;
+  fetch("/api/config")
+    .then(function (r) {
+      return r.json();
+    })
+    .then(function (cfg) {
+      turnstileSiteKey = cfg && cfg.turnstileSiteKey;
+      if (!turnstileSiteKey) return;
+      window.__fcTurnstileOnload = function () {
+        try {
+          turnstileWidgetId = window.turnstile.render("#cf-turnstile", {
+            sitekey: turnstileSiteKey,
+            theme: "dark",
+          });
+        } catch (e) {}
+      };
+      var s = document.createElement("script");
+      s.src =
+        "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=__fcTurnstileOnload";
+      s.async = true;
+      s.defer = true;
+      document.head.appendChild(s);
+    })
+    .catch(function () {});
+
+  function turnstileToken() {
+    if (!turnstileSiteKey) return null; // captcha not configured -> not required
+    return (window.turnstile && window.turnstile.getResponse(turnstileWidgetId)) || "";
+  }
+  function turnstileReset() {
+    if (turnstileSiteKey && window.turnstile) {
+      try {
+        window.turnstile.reset(turnstileWidgetId);
+      } catch (e) {}
+    }
+  }
+
   function setStatus(message, kind) {
     if (!status) return;
     status.textContent = message;
@@ -139,6 +178,12 @@
       return;
     }
 
+    var tsToken = turnstileToken();
+    if (turnstileSiteKey && !tsToken) {
+      setStatus("Please complete the captcha below before sending.", "error");
+      return;
+    }
+
     var services = Array.prototype.slice
       .call(form.querySelectorAll('input[name="services"]:checked'))
       .map(function (cb) {
@@ -154,6 +199,7 @@
       services: services,
       message: message,
       website: form.elements.namedItem("website").value || "", // honeypot
+      turnstileToken: tsToken || "",
     };
 
     if (submitBtn) submitBtn.classList.add("loading");
@@ -196,6 +242,7 @@
       })
       .finally(function () {
         if (submitBtn) submitBtn.classList.remove("loading");
+        turnstileReset(); // tokens are single-use; get a fresh one for any retry
       });
   });
 
