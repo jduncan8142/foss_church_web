@@ -10,7 +10,7 @@ import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 import { config, smtpConfigured, turnstileEnabled, umamiEnabled } from "./config.ts";
 import { validateAndNormalize } from "./validate.ts";
-import { storeLead } from "./leads.ts";
+import { storeLead, pruneLeads } from "./leads.ts";
 import { sendContactEmails, verifyEmail } from "./email.ts";
 import { verifyTurnstile } from "./turnstile.ts";
 import { rateLimit } from "./rateLimit.ts";
@@ -222,6 +222,27 @@ app.notFound(async (c) => {
 // Fire-and-forget: a slow/unreachable SMTP host must never block the server
 // from binding its port (which would fail the container healthcheck).
 void verifyEmail();
+
+// Lead-log retention (WEB-004): prune PII older than the retention window at
+// startup and once a day after. Never blocks startup; failures are logged, not
+// fatal. FC_LEAD_RETENTION_DAYS=0 disables it.
+async function runLeadPrune(): Promise<void> {
+  try {
+    const r = await pruneLeads();
+    if (r.removed) {
+      console.log(
+        `[leads] retention: pruned ${r.removed} lead(s) older than ${config.leadRetentionDays}d (${r.kept} kept)`,
+      );
+    }
+  } catch (err) {
+    console.error("[leads] retention prune failed:", (err as Error).message);
+  }
+}
+if (config.leadRetentionDays > 0) {
+  void runLeadPrune();
+  const daily = setInterval(runLeadPrune, 24 * 60 * 60 * 1000);
+  daily.unref?.();
+}
 
 console.log(`[fosschurch-web] listening on http://0.0.0.0:${config.port} (env: ${config.nodeEnv})`);
 
