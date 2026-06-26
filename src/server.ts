@@ -9,11 +9,12 @@ import { serveStatic } from "hono/bun";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 import { config, smtpConfigured, turnstileEnabled, umamiEnabled } from "./config.ts";
-import { validateAndNormalize } from "./validate.ts";
+import { validateAndNormalize, isHoneypotTripped } from "./validate.ts";
 import { storeLead } from "./leads.ts";
 import { sendContactEmails, verifyEmail } from "./email.ts";
 import { verifyTurnstile } from "./turnstile.ts";
 import { rateLimit } from "./rateLimit.ts";
+import { resolveClientIp } from "./ip.ts";
 
 const app = new Hono();
 
@@ -62,63 +63,17 @@ app.get("/api/config", (c) =>
   }),
 );
 
-// IPv4 dotted-quad -> 32-bit int (null if not IPv4).
-function ipv4ToInt(ip: string): number | null {
-  const m = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (!m) return null;
-  let n = 0;
-  for (let i = 1; i <= 4; i++) {
-    const o = Number(m[i]);
-    if (o > 255) return null;
-    n = n * 256 + o;
-  }
-  return n >>> 0;
-}
-
-// Is `addr` inside `cidr`? IPv4 CIDRs match numerically; for IPv6 we only
-// support an exact-address match (enough for ::1).
-function inCidr(addr: string, cidr: string): boolean {
-  if (cidr.includes(":")) return addr === cidr.split("/")[0];
-  const [base, bitsRaw] = cidr.split("/");
-  const bits = bitsRaw === undefined ? 32 : Number(bitsRaw);
-  const a = ipv4ToInt(addr);
-  const b = ipv4ToInt(base!);
-  if (a === null || b === null || !Number.isInteger(bits) || bits < 0 || bits > 32) return false;
-  if (bits === 0) return true;
-  const mask = (0xffffffff << (32 - bits)) >>> 0;
-  return (a & mask) === (b & mask);
-}
-
-// True when the direct socket peer is one of our trusted reverse proxies, so
-// its X-Forwarded-For can be believed. Anything else is a potentially hostile
-// client whose headers we ignore.
-function isTrustedProxy(addr: string): boolean {
-  const a = addr.replace(/^::ffff:/i, ""); // unwrap IPv4-mapped IPv6
-  if (a === "::1") return true;
-  return config.trustedProxyCidrs.some((c) => inCidr(a, c));
-}
-
-// Rate-limit key. The socket peer (from Bun's requestIP) cannot be spoofed by
-// the client; X-Forwarded-For can. So we only trust XFF when the request
-// actually arrived through our proxy (a private-network peer).
-//
-// We also take the LAST hop of XFF, not the first: our single reverse proxy
-// (Nginx Proxy Manager) uses `$proxy_add_x_forwarded_for`, which APPENDS the
-// real client IP to whatever the client sent — so the value the proxy added is
-// the last one and is the only trustworthy entry. Taking the first hop would
-// still be client-spoofable.
+// Resolve the request's client IP via the testable ip.ts helpers (the
+// trusted-proxy / XFF logic lives there; see WEB-002). The socket peer (from
+// Bun's requestIP) cannot be spoofed by the client; X-Forwarded-For can — so
+// XFF is only believed when the peer is one of our trusted proxies.
 function clientIp(c: Context): string {
   const server = c.env as { requestIP?: (req: Request) => { address?: string } | null } | undefined;
   const peer = server?.requestIP?.(c.req.raw)?.address;
-
-  if (peer && isTrustedProxy(peer)) {
-    const xff = c.req.header("x-forwarded-for");
-    const hops = xff?.split(",").map((s) => s.trim()).filter(Boolean);
-    if (hops && hops.length) return hops[hops.length - 1]!;
-    const real = c.req.header("x-real-ip");
-    if (real) return real;
-  }
-  return peer || "unknown";
+  return resolveClientIp(peer, config.trustedProxyCidrs, {
+    xff: c.req.header("x-forwarded-for"),
+    xRealIp: c.req.header("x-real-ip"),
+  });
 }
 
 app.post("/api/contact", async (c) => {
@@ -137,7 +92,7 @@ app.post("/api/contact", async (c) => {
   }
 
   // Honeypot: bots fill the hidden "website" field. Pretend success.
-  if (typeof body.website === "string" && body.website.trim() !== "") {
+  if (isHoneypotTripped(body)) {
     return c.json({ ok: true });
   }
 

@@ -42,6 +42,13 @@ export interface ValidationResult {
   lead?: Lead;
 }
 
+// Honeypot: a hidden "website" field no human fills. Bots that auto-complete
+// every field trip it. Returns true when the field carries a non-empty value,
+// so the caller can silently pretend success without doing real work.
+export function isHoneypotTripped(body: Record<string, unknown>): boolean {
+  return typeof body.website === "string" && body.website.trim() !== "";
+}
+
 // Pragmatic email check — not RFC-perfect, just rejects obvious garbage.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
