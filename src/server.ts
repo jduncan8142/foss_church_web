@@ -8,13 +8,28 @@ import type { Context } from "hono";
 import { serveStatic } from "hono/bun";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
-import { config, smtpConfigured, turnstileEnabled, umamiEnabled } from "./config.ts";
+import { config, turnstileEnabled, umamiEnabled, captchaConfigStatus } from "./config.ts";
 import { validateAndNormalize, isHoneypotTripped } from "./validate.ts";
 import { storeLead } from "./leads.ts";
 import { sendContactEmails, verifyEmail } from "./email.ts";
 import { verifyTurnstile } from "./turnstile.ts";
 import { rateLimit } from "./rateLimit.ts";
 import { resolveClientIp } from "./ip.ts";
+
+// WEB-006: refuse to boot fail-open. In production a missing Turnstile key is
+// fatal (throws here, before the port binds) unless FC_ALLOW_NO_CAPTCHA is
+// explicitly set; otherwise we'd silently accept un-CAPTCHA'd submissions.
+const captchaStatus = captchaConfigStatus({
+  nodeEnv: config.nodeEnv,
+  turnstileEnabled,
+  allowNoCaptcha: config.allowNoCaptcha,
+});
+if (captchaStatus.level === "fatal") {
+  console.error("[config] FATAL:", captchaStatus.message);
+  throw new Error(captchaStatus.message);
+} else if (captchaStatus.level === "warn") {
+  console.warn("[config] WARNING:", captchaStatus.message);
+}
 
 const app = new Hono();
 
@@ -50,9 +65,11 @@ app.use(
   }),
 );
 
-app.get("/healthz", (c) =>
-  c.json({ status: "ok", smtp: smtpConfigured, captcha: turnstileEnabled, time: new Date().toISOString() }),
-);
+// Liveness/readiness probe. Deliberately minimal for anonymous callers
+// (WEB-006): it previously advertised smtp + captcha flags, which signalled to
+// anyone exactly when the captcha was failing open. The container healthcheck
+// only needs HTTP 200.
+app.get("/healthz", (c) => c.json({ status: "ok" }));
 
 // Public, non-secret config for the front-end. Exposes the Turnstile site key
 // (only when the captcha is fully configured) and the Umami snippet details.

@@ -78,12 +78,58 @@ export const config = {
     src: env.FC_UMAMI_SRC ?? "", // e.g. https://analytics.fosschurch.com/script.js
     websiteId: env.FC_UMAMI_WEBSITE_ID ?? "",
   },
+
+  // Explicit, deliberate opt-out to run WITHOUT a captcha in production
+  // (WEB-006). Off by default so a missing Turnstile secret fails the server
+  // closed instead of silently accepting un-CAPTCHA'd submissions on a live
+  // PII-collecting endpoint. Only set this for a knowingly captcha-less deploy.
+  allowNoCaptcha: bool(env.FC_ALLOW_NO_CAPTCHA, false),
 } as const;
 
 // Captcha is enforced only when BOTH keys are present, so we never require a
 // token the browser can't produce (or render a widget the server won't check).
 export const turnstileEnabled =
   config.turnstile.siteKey.length > 0 && config.turnstile.secret.length > 0;
+
+// WEB-006: decide whether a captcha-less configuration is acceptable. Pure +
+// input-driven so it's unit-testable. In production a missing Turnstile key is
+// FATAL (fail-closed) unless FC_ALLOW_NO_CAPTCHA is explicitly set, in which
+// case we boot but warn loudly; in dev we always just warn. server.ts acts on
+// this at startup (throws on "fatal" so the container never serves fail-open).
+export type CaptchaConfigLevel = "ok" | "warn" | "fatal";
+export interface CaptchaConfigStatus {
+  level: CaptchaConfigLevel;
+  message?: string;
+}
+export function captchaConfigStatus(input: {
+  nodeEnv: string;
+  turnstileEnabled: boolean;
+  allowNoCaptcha: boolean;
+}): CaptchaConfigStatus {
+  if (input.turnstileEnabled) return { level: "ok" };
+  const isProd = input.nodeEnv === "production";
+  if (isProd && !input.allowNoCaptcha) {
+    return {
+      level: "fatal",
+      message:
+        "Turnstile is not fully configured (FC_TURNSTILE_SITE_KEY and FC_TURNSTILE_SECRET) " +
+        "but NODE_ENV=production. Refusing to start fail-open on a live PII endpoint. " +
+        "Set both keys, or set FC_ALLOW_NO_CAPTCHA=1 to deliberately run without a captcha.",
+    };
+  }
+  if (isProd) {
+    return {
+      level: "warn",
+      message:
+        "Running in production WITHOUT a captcha (FC_ALLOW_NO_CAPTCHA is set) — " +
+        "the contact endpoint is protected only by the honeypot + per-IP rate limit.",
+    };
+  }
+  return {
+    level: "warn",
+    message: "Captcha disabled (non-production) — honeypot + per-IP rate limit only.",
+  };
+}
 
 // Analytics snippet loads only when both the script URL and website id are set.
 export const umamiEnabled = config.umami.src.length > 0 && config.umami.websiteId.length > 0;
