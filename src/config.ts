@@ -24,6 +24,14 @@ function num(value: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+// Like num() but allows an explicit 0 (used by FC_LEAD_RETENTION_DAYS, where 0
+// means "retain indefinitely / pruning disabled"). Blank/garbage -> fallback.
+function numNonNeg(value: string | undefined, fallback: number): number {
+  if (value === undefined || value.trim() === "") return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
 export const config = {
   port: num(env.PORT, 8080),
   nodeEnv: env.NODE_ENV ?? "production",
@@ -49,6 +57,14 @@ export const config = {
 
   // Durable lead log (bind-mounted on fc1). The server never serves this dir.
   dataDir: env.FC_DATA_DIR ?? "./data",
+
+  // Lead-log retention (WEB-004). Contact submissions hold PII (name, email,
+  // phone, IP, user-agent); we keep them only as long as needed to follow up.
+  // Entries older than this many days are pruned from leads.jsonl at startup
+  // and daily thereafter. Default 540 (~18 months, mid-range of the OPS-G
+  // 12–24-month window for Web leads). Set FC_LEAD_RETENTION_DAYS=0 to retain
+  // indefinitely (pruning disabled).
+  leadRetentionDays: numNonNeg(env.FC_LEAD_RETENTION_DAYS, 540),
 
   // Per-IP rate limit for the contact endpoint.
   rateLimit: {
