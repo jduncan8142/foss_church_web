@@ -8,7 +8,9 @@
     "dev": "bun run --watch src/server.ts",
     "start": "bun run src/server.ts",
     "typecheck": "tsc --noEmit",
-    "build:og": "bun run scripts/build-og.mjs"
+    "build:og": "bun run scripts/build-og.mjs",
+    "leads:backup": "bun run scripts/leads-tool.ts backup",
+    "leads:export": "bun run scripts/leads-tool.ts export"
   },
   "dependencies": {
     "hono": "^4.6.15",

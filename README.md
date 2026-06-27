@@ -144,6 +144,39 @@ SMTP hiccups.
 tail -n 5 ~/fosschurch-web/data/leads.jsonl
 ```
 
+#### Backup & export (WEB-003)
+
+`scripts/leads-tool.ts` is an operator CLI (run on the host, beside the data
+dir — there is **no web export endpoint**, since the site is unauthenticated and
+the log holds PII: name, email, phone, IP, user-agent). It only reads the data
+dir and writes local artifacts; it never emails or transmits anything.
+
+```sh
+# Gzip snapshot into data/backups/ (keeps 14 days, never fewer than 7 snapshots)
+docker compose exec fosschurch-web bun run scripts/leads-tool.ts backup
+#   options: --keep-days N (default 14)  --keep-min N (default 7)
+
+# CSV export for follow-up / CRM import (formula-injection-safe cells)
+docker compose exec fosschurch-web bun run scripts/leads-tool.ts export
+#   → data/exports/leads-<ts>.csv   (or --stdout, or --out PATH)
+```
+
+Both write artifacts `0600` under the bind-mounted data dir, which shares a disk
+with the live log — **copy snapshots off-box for a real backup**, e.g.:
+
+```sh
+# Hourly snapshot + nightly off-box copy (host crontab on fc1)
+0 * * * * cd ~/fosschurch-web && docker compose exec -T fosschurch-web bun run scripts/leads-tool.ts backup
+30 3 * * * rsync -a ~/fosschurch-web/data/backups/ backup-host:fcweb-leads/
+```
+
+**Restore:** `gunzip -c data/backups/leads-<ts>.jsonl.gz > data/leads.jsonl`
+(stop the container first so it isn't mid-append). Retention of the live log
+itself is handled separately by `pruneLeads()` (WEB-004).
+
+Routing leads into ChMS (prospects) or EMS (CRM) — the funnel half of WEB-003 —
+remains open; this lands the durable backup + portable export first.
+
 ## Troubleshooting
 
 - **Form returns 502 / emails not arriving:** check `docker compose logs`. Live
