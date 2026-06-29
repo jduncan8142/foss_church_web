@@ -55,7 +55,7 @@ function row(label: string, value: string): string {
   </tr>`;
 }
 
-function adminHtml(lead: Lead): string {
+export function adminHtml(lead: Lead): string {
   const services = lead.services.length
     ? lead.services.map((s) => escapeHtml(s)).join("<br>")
     : "<em style='color:#7c8aa0'>None selected</em>";
@@ -83,7 +83,7 @@ function adminHtml(lead: Lead): string {
   </table></body></html>`;
 }
 
-function adminText(lead: Lead): string {
+export function adminText(lead: Lead): string {
   return [
     "New website inquiry — FOSS Church",
     "",
@@ -103,7 +103,7 @@ function adminText(lead: Lead): string {
     .join("\n");
 }
 
-function autoReplyHtml(lead: Lead): string {
+export function autoReplyHtml(lead: Lead): string {
   const first = escapeHtml(lead.name.split(" ")[0] || "there");
   return `<!doctype html><html><body style="margin:0;background:#eef1f6;padding:24px">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dfe4ec">
@@ -122,7 +122,7 @@ function autoReplyHtml(lead: Lead): string {
   </table></body></html>`;
 }
 
-function autoReplyText(lead: Lead): string {
+export function autoReplyText(lead: Lead): string {
   const first = lead.name.split(" ")[0] || "there";
   return [
     `Thanks, ${first}!`,
